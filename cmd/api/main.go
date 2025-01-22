@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
-	"net/http"
+	_ "net/http"
 
-	"github.com/go-chi/chi/middleware"
-	"github.com/go-chi/chi/v5"
+	_ "github.com/go-chi/chi/middleware"
+	_ "github.com/go-chi/chi/v5"
+	"github.com/ikotun/llmxp/internals/handlers"
 	"github.com/joho/godotenv"
 )
 
@@ -20,18 +21,21 @@ func main() {
 
 	}
 
-	r := chi.NewRouter()
+	handlers.InitOpenAI()
+	/*
+		r := chi.NewRouter()
 
-	r.Use(middleware.Logger)
+		r.Use(middleware.Logger)
 
-	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("Hello World!"))
-	})
+		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
+			w.Write([]byte("Hello World!"))
+		})
 
-	fmt.Printf("Server is running on port 6600\n")
+		fmt.Printf("Server is running on port 6600\n")
 
-	err = http.ListenAndServe(":6600", r)
-	if err != nil {
-		fmt.Println(err)
-	}
+		err = http.ListenAndServe(":6600", r)
+		if err != nil {
+			fmt.Println(err)
+		}
+	*/
 }
