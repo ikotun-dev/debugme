@@ -16,6 +16,8 @@ func InitDeepSeek() {
 	}
 }
 
+//TODO: implement deepseek chat completion
+
 func ChatDeepSeek(w http.ResponseWriter, r *http.Request) {
 	InitDeepSeek()
 	url := "https://api.deepseek.com/chat/completions"
