@@ -1,9 +1,9 @@
 package main
 
 import (
-	"bufio"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
@@ -35,24 +35,45 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	style := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500")).Bold(true)
+	headerStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500")).Bold(true)
+	_ = lipgloss.NewStyle().Padding(0, 2)
 
-	wrappedExplanation := wordwrap.String(m.errorExplanation, m.width)
+	errorRow := fmt.Sprintf("%s: %s", headerStyle.Render("Error"), m.errorMessage)
+	explanationRow := fmt.Sprintf("%s: %s", headerStyle.Render("Explanation"), wordwrap.String(m.errorExplanation, m.width-4))
 
-	return fmt.Sprintf(
-		"%s\n\n%s\n\n%s\n%s\n",
-		style.Render("❗ @debugme:"),
-		m.errorMessage,
-		style.Render("💡 Explanation:"),
-		wrappedExplanation,
-	)
+	table := lipgloss.JoinVertical(lipgloss.Left, errorRow, explanationRow)
+
+	box := lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder()).
+		Padding(1).
+		Width(m.width - 10).
+		Render(table)
+
+	return box
 }
 
 func main() {
-	reader := bufio.NewReader(os.Stdin)
-	input, _ := reader.ReadString('\n')
-	errorMessage := strings.TrimSpace(input)
+	var errorMessage string
 
+	if len(os.Args) >= 3 && os.Args[1] == "--command" {
+		cmd := exec.Command("sh", "-c", os.Args[2])
+		output, _ := cmd.CombinedOutput()
+		errorMessage = string(output)
+	} else if len(os.Args) >= 3 && os.Args[1] == "--file" {
+		content, err := os.ReadFile(os.Args[2])
+		if err != nil {
+			fmt.Println("Failed to read file:", err)
+			os.Exit(1)
+		}
+		errorMessage = string(content)
+	} else if len(os.Args) >= 2 {
+		errorMessage = strings.Join(os.Args[1:], " ")
+	} else {
+		fmt.Println("Usage: go run main.go [--command 'cmd'] OR [--file file.log] OR 'error message directly'")
+		os.Exit(1)
+	}
+
+	errorMessage = strings.TrimSpace(errorMessage)
 	explanation := lookupExplanation(errorMessage)
 
 	p := tea.NewProgram(model{
