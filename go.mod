@@ -1,4 +1,4 @@
-module github.com/ikotun/llmxp
+module github.com/ikotun/debugme
 
 go 1.23.4
 

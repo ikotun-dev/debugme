@@ -8,8 +8,8 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
-	errGenerator "github.com/ikotun/llmxp/internals/handlers"
-	"github.com/muesli/reflow/wordwrap"
+	"github.com/charmbracelet/x/term"
+	errGenerator "github.com/ikotun/debugme/internals/handlers"
 )
 
 type model struct {
@@ -19,7 +19,7 @@ type model struct {
 }
 
 func (m model) Init() tea.Cmd {
-	return nil
+	return tea.Quit
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -35,26 +35,62 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	headerStyle := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFA500")).Bold(true)
-	_ = lipgloss.NewStyle().Padding(0, 2)
+	headerStyle := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("#FFA500")).
+		Bold(true)
 
-	errorRow := fmt.Sprintf("%s: %s", headerStyle.Render("Error"), m.errorMessage)
-	explanationRow := fmt.Sprintf("%s: %s", headerStyle.Render("Explanation"), wordwrap.String(m.errorExplanation, m.width-4))
+	contentStyle := lipgloss.NewStyle().
+		Padding(0, 2).
+		Width(m.width - 8)
 
-	table := lipgloss.JoinVertical(lipgloss.Left, errorRow, explanationRow)
-
-	box := lipgloss.NewStyle().
+	borderStyle := lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
-		Padding(1).
-		Width(m.width - 10).
-		Render(table)
+		Margin(0, 0, 1, 1).
+		Width(m.width - 4)
 
-	return box
+	wrappedExplanation := wordwrap(m.errorExplanation, m.width-8)
+
+	content := fmt.Sprintf(
+		"%s\n\n%s\n\n%s\n%s",
+		headerStyle.Render("❗@debugme"),
+		m.errorMessage,
+		headerStyle.Render("💡 Explanation:"),
+		wrappedExplanation,
+	)
+
+	return borderStyle.Render(contentStyle.Render(content))
+}
+
+func wordwrap(text string, width int) string {
+	var wrapped []string
+	words := strings.Fields(text)
+
+	line := ""
+	for _, word := range words {
+		if len(line)+len(word)+1 > width {
+			wrapped = append(wrapped, line)
+			line = word
+		} else {
+			if line != "" {
+				line += " "
+			}
+			line += word
+		}
+	}
+	if line != "" {
+		wrapped = append(wrapped, line)
+	}
+
+	return strings.Join(wrapped, "\n")
 }
 
 func main() {
 	var errorMessage string
 
+	width, _, err := term.GetSize(0)
+	if err != nil {
+		width = 80 // Fallback to default width if something goes wrong
+	}
 	if len(os.Args) >= 3 && os.Args[1] == "--command" {
 		cmd := exec.Command("sh", "-c", os.Args[2])
 		output, _ := cmd.CombinedOutput()
@@ -79,6 +115,7 @@ func main() {
 	p := tea.NewProgram(model{
 		errorMessage:     errorMessage,
 		errorExplanation: explanation,
+		width:            width,
 	})
 	if err := p.Start(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error starting app: %v\n", err)
