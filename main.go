@@ -89,7 +89,7 @@ func main() {
 
 	width, _, err := term.GetSize(0)
 	if err != nil {
-		width = 80 // Fallback to default width if something goes wrong
+		width = 80
 	}
 	if len(os.Args) >= 3 && os.Args[1] == "--command" {
 		cmd := exec.Command("sh", "-c", os.Args[2])
